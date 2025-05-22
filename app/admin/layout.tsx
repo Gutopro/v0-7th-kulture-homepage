@@ -1,30 +1,59 @@
-import type { ReactNode } from "react"
+"use client"
+
+import { type ReactNode, useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { AdminSidebar } from "@/components/admin/sidebar"
-import { getCurrentAdmin } from "@/lib/auth"
-import { redirect } from "next/navigation"
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  const admin = getCurrentAdmin()
+interface AdminLayoutProps {
+  children: ReactNode
+}
 
-  // If not logged in and not on login page, redirect to login
-  if (!admin && !children.props.childProp.segment.includes("login")) {
-    redirect("/admin/login")
-  }
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // If on login page and already logged in, redirect to admin dashboard
-  if (admin && children.props.childProp.segment.includes("login")) {
-    redirect("/admin")
-  }
+  // Check if we're on the login page
+  const isLoginPage = pathname === "/admin/login"
+
+  useEffect(() => {
+    // Simulate checking authentication
+    // In production, you would check a real auth token
+    const checkAuth = () => {
+      const isLoggedIn = localStorage.getItem("adminLoggedIn") === "true"
+      setIsAuthenticated(isLoggedIn)
+      setIsLoading(false)
+
+      // Redirect if not authenticated and not on login page
+      if (!isLoggedIn && !isLoginPage) {
+        router.push("/admin/login")
+      }
+    }
+
+    checkAuth()
+  }, [isLoginPage, router])
 
   // If on login page, don't show the sidebar
-  if (children.props.childProp.segment.includes("login")) {
+  if (isLoginPage) {
     return children
   }
 
-  return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
-      <div className="flex-1 overflow-auto">{children}</div>
-    </div>
-  )
+  // Show loading state
+  if (isLoading) {
+    return <div className="flex min-h-screen items-center justify-center">Loading...</div>
+  }
+
+  // If authenticated, show admin layout
+  if (isAuthenticated) {
+    return (
+      <div className="flex min-h-screen">
+        <AdminSidebar />
+        <div className="flex-1 overflow-auto">{children}</div>
+      </div>
+    )
+  }
+
+  // This should not be reached due to the redirect in useEffect
+  return null
 }

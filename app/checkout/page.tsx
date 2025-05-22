@@ -66,7 +66,7 @@ export default function CheckoutPage() {
           description: "Thank you for your order! We will contact you shortly.",
         })
         clearCart()
-        router.push(`/order-confirmation/${result.orderId}`)
+        router.push("/")
       } else {
         toast({
           title: "Error",
@@ -185,7 +185,7 @@ export default function CheckoutPage() {
                         <Image
                           src={
                             item.product.image_url ||
-                            `/placeholder.svg?height=64&width=64&text=${encodeURIComponent(item.product.name)}`
+                            `/placeholder.svg?height=64&width=64&text=${encodeURIComponent(item.product.name) || "/placeholder.svg"}`
                           }
                           alt={item.product.name}
                           fill

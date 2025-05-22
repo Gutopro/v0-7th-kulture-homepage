@@ -2,6 +2,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
 import { Testimonial } from "@/components/testimonial"
+import { ContactForm } from "@/components/contact-form"
 import { Button } from "@/components/ui/button"
 import { Scissors, Ruler, Package, Users, Mail, Phone, MapPin } from "lucide-react"
 import Link from "next/link"
@@ -71,25 +72,7 @@ const sampleProducts = [
   },
 ]
 
-export default async function Home() {
-  // Initialize the database tables if they don't exist
-  const { initializeDatabase, getFeaturedProducts } = await import("@/lib/db")
-  await initializeDatabase()
-
-  // Try to fetch products from the database, fallback to sample data if empty or error
-  let products
-  try {
-    products = await getFeaturedProducts()
-    // If no products in database, use sample data
-    if (products.length === 0) {
-      products = sampleProducts
-    }
-  } catch (error) {
-    console.error("Error fetching products:", error)
-    // If there's an error (like table doesn't exist), use sample data
-    products = sampleProducts
-  }
-
+export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -138,14 +121,14 @@ export default async function Home() {
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
+            {sampleProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
 
           <div className="mt-12 text-center">
-            <Button size="lg" variant="outline">
-              View All Products
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/products">View All Products</Link>
             </Button>
           </div>
         </div>
@@ -310,54 +293,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="bg-card p-6 rounded-lg shadow-sm">
-            <h3 className="text-xl font-bold mb-4">Send Us a Message</h3>
-            <form className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="name" className="text-sm font-medium">
-                    Your Name
-                  </label>
-                  <input id="name" className="w-full px-3 py-2 border rounded-md text-sm" placeholder="John Doe" />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    Your Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
-                    placeholder="john@example.com"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="subject" className="text-sm font-medium">
-                  Subject
-                </label>
-                <input
-                  id="subject"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
-                  placeholder="How can we help you?"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="message" className="text-sm font-medium">
-                  Message
-                </label>
-                <textarea
-                  id="message"
-                  rows={4}
-                  className="w-full px-3 py-2 border rounded-md text-sm resize-none"
-                  placeholder="Your message here..."
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Send Message
-              </Button>
-            </form>
-          </div>
+          <ContactForm />
         </div>
       </section>
 

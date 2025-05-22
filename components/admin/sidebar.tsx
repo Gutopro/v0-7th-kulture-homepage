@@ -23,25 +23,15 @@ export function AdminSidebar() {
   }
 
   const handleLogout = async () => {
-    try {
-      await fetch("/api/admin/logout", {
-        method: "POST",
-      })
+    // Simulate logout
+    localStorage.removeItem("adminLoggedIn")
 
-      toast({
-        title: "Logged out",
-        description: "You have been logged out successfully",
-      })
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    })
 
-      router.push("/admin/login")
-      router.refresh()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to log out. Please try again.",
-        variant: "destructive",
-      })
-    }
+    router.push("/admin/login")
   }
 
   const navItems = [

@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import Image from "next/image"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
@@ -17,10 +19,19 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
-import { submitOrder } from "@/app/actions"
 import { useCart } from "@/context/cart-context"
 import { formatCurrency } from "@/lib/utils"
-import type { Product } from "@/lib/db"
+
+interface Product {
+  id: number
+  name: string
+  description: string
+  price: number
+  category: string
+  image_url: string
+  in_stock: boolean
+  created_at: Date
+}
 
 interface ProductCardProps {
   product: Product
@@ -32,32 +43,26 @@ export function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast()
   const { addItem } = useCart()
 
-  async function handleSubmit(formData: FormData) {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
     setIsSubmitting(true)
 
     try {
-      const result = await submitOrder(formData)
-
-      if (result.success) {
+      // Simulate a successful order submission
+      setTimeout(() => {
         toast({
           title: "Order Submitted",
-          description: result.message,
+          description: "Your order has been submitted successfully! We will contact you shortly.",
         })
         setIsOpen(false)
-      } else {
-        toast({
-          title: "Error",
-          description: result.message,
-          variant: "destructive",
-        })
-      }
+        setIsSubmitting(false)
+      }, 1000)
     } catch (error) {
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       })
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -100,7 +105,7 @@ export function ProductCard({ product }: ProductCardProps) {
               Fill out the form below to place your order. We'll contact you to confirm details.
             </DialogDescription>
           </DialogHeader>
-          <form action={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <input type="hidden" name="productId" value={product.id} />
             <div className="grid gap-2">
               <Label htmlFor="name">Full Name</Label>

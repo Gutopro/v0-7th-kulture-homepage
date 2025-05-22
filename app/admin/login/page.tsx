@@ -22,37 +22,30 @@ export default function AdminLoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast({
-          title: "Login successful",
-          description: "Welcome to the admin dashboard",
-        })
-        router.push("/admin")
-        router.refresh()
-      } else {
-        toast({
-          title: "Login failed",
-          description: data.message || "Invalid username or password",
-          variant: "destructive",
-        })
-      }
+      // For now, just simulate a successful login
+      // In production, you would validate credentials against your API
+      setTimeout(() => {
+        if (username === "admin" && password === "admin123") {
+          toast({
+            title: "Login successful",
+            description: "Welcome to the admin dashboard",
+          })
+          router.push("/admin")
+        } else {
+          toast({
+            title: "Login failed",
+            description: "Invalid username or password",
+            variant: "destructive",
+          })
+        }
+        setIsLoading(false)
+      }, 1000)
     } catch (error) {
       toast({
         title: "Login error",
         description: "An error occurred during login. Please try again.",
         variant: "destructive",
       })
-    } finally {
       setIsLoading(false)
     }
   }
