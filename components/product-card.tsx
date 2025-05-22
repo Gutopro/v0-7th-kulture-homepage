@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { submitOrder } from "@/app/actions"
+import { useCart } from "@/context/cart-context"
+import { formatCurrency } from "@/lib/utils"
 import type { Product } from "@/lib/db"
 
 interface ProductCardProps {
@@ -28,6 +30,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
+  const { addItem } = useCart()
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -59,6 +62,10 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   }
 
+  const handleAddToCart = () => {
+    addItem(product, 1)
+  }
+
   return (
     <>
       <Card className="overflow-hidden">
@@ -73,11 +80,14 @@ export function ProductCard({ product }: ProductCardProps) {
         <CardContent className="p-4">
           <h3 className="font-medium text-lg">{product.name}</h3>
           <p className="text-muted-foreground text-sm line-clamp-2 mt-1">{product.description}</p>
-          <p className="font-bold mt-2">₦{product.price.toLocaleString()}</p>
+          <p className="font-bold mt-2">₦{formatCurrency(product.price)}</p>
         </CardContent>
-        <CardFooter className="p-4 pt-0">
-          <Button onClick={() => setIsOpen(true)} className="w-full">
-            Order Now
+        <CardFooter className="p-4 pt-0 flex gap-2">
+          <Button onClick={handleAddToCart} className="flex-1">
+            Add to Cart
+          </Button>
+          <Button variant="outline" onClick={() => setIsOpen(true)} className="flex-1">
+            Quick Order
           </Button>
         </CardFooter>
       </Card>
