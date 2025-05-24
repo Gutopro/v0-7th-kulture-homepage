@@ -4,6 +4,9 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 
 export function ContactForm() {
@@ -17,86 +20,77 @@ export function ContactForm() {
     try {
       const formData = new FormData(e.currentTarget)
 
-      // For now, just simulate a successful submission
-      // In production, you would send this to your API
-      setTimeout(() => {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.get("name"),
+          email: formData.get("email"),
+          subject: formData.get("subject"),
+          message: formData.get("message"),
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
         toast({
           title: "Message Sent",
-          description: "Your message has been sent successfully! We'll get back to you soon.",
+          description: "Thank you for your message. We'll get back to you soon!",
         })
+        // Reset form
         e.currentTarget.reset()
-        setIsSubmitting(false)
-      }, 1000)
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to send message. Please try again.",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       })
+    } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="bg-card p-6 rounded-lg shadow-sm">
-      <h3 className="text-xl font-bold mb-4">Send Us a Message</h3>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">
-              Your Name
-            </label>
-            <input
-              id="name"
-              name="name"
-              className="w-full px-3 py-2 border rounded-md text-sm"
-              placeholder="John Doe"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">
-              Your Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              className="w-full px-3 py-2 border rounded-md text-sm"
-              placeholder="john@example.com"
-              required
-            />
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="name">Name</Label>
+          <Input id="name" name="name" required minLength={2} maxLength={100} placeholder="Your full name" />
         </div>
-        <div className="space-y-2">
-          <label htmlFor="subject" className="text-sm font-medium">
-            Subject
-          </label>
-          <input
-            id="subject"
-            name="subject"
-            className="w-full px-3 py-2 border rounded-md text-sm"
-            placeholder="How can we help you?"
-            required
-          />
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" required maxLength={255} placeholder="your.email@example.com" />
         </div>
-        <div className="space-y-2">
-          <label htmlFor="message" className="text-sm font-medium">
-            Message
-          </label>
-          <textarea
-            id="message"
-            name="message"
-            rows={4}
-            className="w-full px-3 py-2 border rounded-md text-sm resize-none"
-            placeholder="Your message here..."
-            required
-          />
-        </div>
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Sending..." : "Send Message"}
-        </Button>
-      </form>
-    </div>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="subject">Subject</Label>
+        <Input id="subject" name="subject" required minLength={5} maxLength={200} placeholder="What is this about?" />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="message">Message</Label>
+        <Textarea
+          id="message"
+          name="message"
+          required
+          minLength={10}
+          maxLength={1000}
+          rows={5}
+          placeholder="Tell us more about your inquiry..."
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Sending..." : "Send Message"}
+      </Button>
+    </form>
   )
 }

@@ -37,6 +37,16 @@ export default function CheckoutPage() {
         address: formData.get("address") as string,
       }
 
+      // Validate required fields
+      if (!customerData.name || !customerData.email || !customerData.phone || !customerData.address) {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        })
+        return
+      }
+
       // Create order items
       const orderItems = items.map((item) => ({
         product_id: item.product.id,
@@ -45,20 +55,25 @@ export default function CheckoutPage() {
         custom_requirements: item.customRequirements || "",
       }))
 
+      const orderData = {
+        customer: customerData,
+        items: orderItems,
+        total_amount: totalPrice,
+      }
+
+      console.log("Submitting order:", orderData)
+
       // Submit order
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          customer: customerData,
-          items: orderItems,
-          total_amount: totalPrice,
-        }),
+        body: JSON.stringify(orderData),
       })
 
       const result = await response.json()
+      console.log("Order response:", result)
 
       if (result.success) {
         toast({
@@ -66,15 +81,16 @@ export default function CheckoutPage() {
           description: "Thank you for your order! We will contact you shortly.",
         })
         clearCart()
-        router.push("/")
+        router.push(`/order-confirmation/${result.orderId}`)
       } else {
         toast({
-          title: "Error",
+          title: "Order Failed",
           description: result.message || "An error occurred while placing your order. Please try again.",
           variant: "destructive",
         })
       }
     } catch (error) {
+      console.error("Checkout error:", error)
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -119,16 +135,37 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" name="name" required />
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      required
+                      minLength={2}
+                      maxLength={100}
+                      placeholder="Enter your full name"
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" required />
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      maxLength={255}
+                      placeholder="your.email@example.com"
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" name="phone" required />
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      required
+                      minLength={10}
+                      maxLength={20}
+                      placeholder="+234 123 456 7890"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -140,8 +177,16 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-2">
-                    <Label htmlFor="address">Delivery Address</Label>
-                    <Textarea id="address" name="address" rows={3} required />
+                    <Label htmlFor="address">Delivery Address *</Label>
+                    <Textarea
+                      id="address"
+                      name="address"
+                      rows={3}
+                      required
+                      minLength={5}
+                      maxLength={500}
+                      placeholder="Enter your complete delivery address including street, city, state, and postal code"
+                    />
                   </div>
                 </CardContent>
               </Card>

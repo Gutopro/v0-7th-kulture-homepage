@@ -2,20 +2,25 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import type { Product } from "@/lib/db"
 import { useToast } from "@/components/ui/use-toast"
 
 export type CartItem = {
-  product: Product
+  product: {
+    id: number
+    name: string
+    price: number
+    image_url?: string
+    category?: string
+  }
   quantity: number
   customRequirements?: string
 }
 
 type CartContextType = {
   items: CartItem[]
-  addItem: (product: Product, quantity?: number, customRequirements?: string) => void
-  updateItem: (productId: number, quantity: number, customRequirements?: string) => void
-  removeItem: (productId: number) => void
+  addItem: (product: any, quantity: number, customRequirements?: string) => void
+  removeItem: (id: number) => void
+  updateItem: (id: number, quantity: number, customRequirements?: string) => void
   clearCart: () => void
   totalItems: number
   totalPrice: number
@@ -24,10 +29,11 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
   const { toast } = useToast()
+  const [items, setItems] = useState<CartItem[]>([])
+  const [mounted, setMounted] = useState(false)
 
-  // Load cart from localStorage on client side
+  // Load cart from localStorage on mount
   useEffect(() => {
     try {
       const savedCart = localStorage.getItem("cart")
@@ -36,78 +42,87 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to load cart from localStorage:", error)
+      // If there's an error, just start with an empty cart
     }
+    setMounted(true)
   }, [])
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-    try {
-      localStorage.setItem("cart", JSON.stringify(items))
-    } catch (error) {
-      console.error("Failed to save cart to localStorage:", error)
+    if (mounted) {
+      try {
+        localStorage.setItem("cart", JSON.stringify(items))
+      } catch (error) {
+        console.error("Failed to save cart to localStorage:", error)
+      }
     }
-  }, [items])
+  }, [items, mounted])
 
-  const addItem = (product: Product, quantity = 1, customRequirements = "") => {
+  const addItem = (product: any, quantity = 1, customRequirements?: string) => {
     setItems((prevItems) => {
       // Check if item already exists in cart
-      const existingItemIndex = prevItems.findIndex((item) => item.product.id === product.id)
+      const existingItemIndex = prevItems.findIndex((i) => i.product.id === product.id)
 
       if (existingItemIndex >= 0) {
-        // Update existing item
+        // Update quantity of existing item
         const updatedItems = [...prevItems]
-        updatedItems[existingItemIndex] = {
-          ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + quantity,
-          customRequirements: customRequirements || updatedItems[existingItemIndex].customRequirements,
+        updatedItems[existingItemIndex].quantity += quantity
+        if (customRequirements) {
+          updatedItems[existingItemIndex].customRequirements = customRequirements
         }
-
         toast({
           title: "Cart updated",
           description: `${product.name} quantity increased to ${updatedItems[existingItemIndex].quantity}`,
         })
-
         return updatedItems
       } else {
         // Add new item
+        const newItem: CartItem = {
+          product: {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image_url: product.image_url,
+            category: product.category,
+          },
+          quantity,
+          customRequirements,
+        }
         toast({
           title: "Added to cart",
           description: `${product.name} added to your cart`,
         })
-
-        return [...prevItems, { product, quantity, customRequirements }]
+        return [...prevItems, newItem]
       }
     })
   }
 
-  const updateItem = (productId: number, quantity: number, customRequirements?: string) => {
+  const removeItem = (id: number) => {
     setItems((prevItems) => {
-      return prevItems.map((item) => {
-        if (item.product.id === productId) {
-          return {
-            ...item,
-            quantity,
-            customRequirements: customRequirements !== undefined ? customRequirements : item.customRequirements,
-          }
-        }
-        return item
-      })
-    })
-  }
-
-  const removeItem = (productId: number) => {
-    setItems((prevItems) => {
-      const itemToRemove = prevItems.find((item) => item.product.id === productId)
-
+      const itemToRemove = prevItems.find((item) => item.product.id === id)
       if (itemToRemove) {
         toast({
           title: "Removed from cart",
           description: `${itemToRemove.product.name} removed from your cart`,
         })
       }
-
-      return prevItems.filter((item) => item.product.id !== productId)
+      return prevItems.filter((item) => item.product.id !== id)
     })
+  }
+
+  const updateItem = (id: number, quantity: number, customRequirements?: string) => {
+    if (quantity < 1) {
+      removeItem(id)
+      return
+    }
+
+    setItems((prevItems) =>
+      prevItems.map((item) =>
+        item.product.id === id
+          ? { ...item, quantity, customRequirements: customRequirements ?? item.customRequirements }
+          : item,
+      ),
+    )
   }
 
   const clearCart = () => {
@@ -119,7 +134,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const totalItems = items.reduce((total, item) => total + item.quantity, 0)
-
   const totalPrice = items.reduce((total, item) => total + item.product.price * item.quantity, 0)
 
   return (
@@ -127,8 +141,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       value={{
         items,
         addItem,
-        updateItem,
         removeItem,
+        updateItem,
         clearCart,
         totalItems,
         totalPrice,

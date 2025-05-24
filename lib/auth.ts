@@ -1,6 +1,6 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { sql } from "@/lib/db"
+import { createServerSupabaseClient } from "@/lib/supabase"
 import { createHash } from "crypto"
 
 // Types
@@ -18,27 +18,35 @@ export function hashPassword(password: string): string {
 // Initialize admin table and create default admin
 export async function initializeAdminTable() {
   try {
-    // Create admin table if it doesn't exist
-    await sql`
-      CREATE TABLE IF NOT EXISTS admins (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `
+    const supabase = createServerSupabaseClient()
 
     // Check if default admin exists
-    const adminExists = await sql`SELECT id FROM admins WHERE username = 'admin'`
+    const { data: adminExists, error: checkError } = await supabase
+      .from("admins")
+      .select("id")
+      .eq("username", "admin")
+      .single()
+
+    if (checkError && checkError.code !== "PGRST116") {
+      // Error other than "no rows returned"
+      console.error("Error checking admin:", checkError)
+      return { success: false, error: checkError }
+    }
 
     // Create default admin if it doesn't exist
-    if (adminExists.length === 0) {
+    if (!adminExists) {
       const defaultPassword = hashPassword("admin123") // Default password: admin123
-      await sql`
-        INSERT INTO admins (username, password, name)
-        VALUES ('admin', ${defaultPassword}, 'Administrator')
-      `
+      const { error: insertError } = await supabase.from("admins").insert({
+        username: "admin",
+        password: defaultPassword,
+        name: "Administrator",
+      })
+
+      if (insertError) {
+        console.error("Error creating admin:", insertError)
+        return { success: false, error: insertError }
+      }
+
       console.log("Default admin created")
     }
 
@@ -52,19 +60,22 @@ export async function initializeAdminTable() {
 // Login function
 export async function login(username: string, password: string) {
   try {
+    const supabase = createServerSupabaseClient()
     const hashedPassword = hashPassword(password)
-    const result = await sql`
-      SELECT id, username, name
-      FROM admins
-      WHERE username = ${username} AND password = ${hashedPassword}
-    `
 
-    if (result.length === 0) {
+    const { data: result, error } = await supabase
+      .from("admins")
+      .select("id, username, name")
+      .eq("username", username)
+      .eq("password", hashedPassword)
+      .single()
+
+    if (error || !result) {
       return { success: false, message: "Invalid username or password" }
     }
 
     // Set session cookie
-    const admin = result[0] as Admin
+    const admin = result as Admin
     const session = {
       id: admin.id,
       username: admin.username,

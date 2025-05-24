@@ -1,48 +1,82 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { createServerSupabaseClient } from "@/lib/supabase"
+import { ContactSchema } from "@/lib/validation"
+import { handleError } from "@/lib/errors"
+import { logger } from "@/lib/logger"
+import { contactRateLimiter } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID()
+
   try {
-    const formData = await request.formData()
+    // Rate limiting
+    const ip = request.ip || request.headers.get("x-forwarded-for") || "unknown"
+    const rateLimitResult = contactRateLimiter.check(ip)
 
-    // Extract form data
-    const name = formData.get("name") as string
-    const email = formData.get("email") as string
-    const subject = formData.get("subject") as string
-    const message = formData.get("message") as string
-
-    // Validate inputs
-    if (!name || !email || !subject || !message) {
-      return NextResponse.json({ success: false, message: "All fields are required" }, { status: 400 })
+    if (!rateLimitResult.allowed) {
+      logger.warn("Contact form rate limit exceeded", { ip }, undefined, requestId)
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Too many contact form submissions. Please try again later.",
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000),
+        },
+        { status: 429 },
+      )
     }
 
-    // Create contact message table if it doesn't exist
-    await sql`
-      CREATE TABLE IF NOT EXISTS contact_messages (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        subject VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `
+    const formData = await request.formData()
+
+    // Extract and validate form data
+    const contactData = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      subject: formData.get("subject") as string,
+      message: formData.get("message") as string,
+    }
+
+    const validatedData = ContactSchema.parse(contactData)
+    const supabase = createServerSupabaseClient()
 
     // Store the message in the database
-    await sql`
-      INSERT INTO contact_messages (name, email, subject, message)
-      VALUES (${name}, ${email}, ${subject}, ${message})
-    `
+    const { error } = await supabase.from("contact_messages").insert({
+      name: validatedData.name,
+      email: validatedData.email,
+      subject: validatedData.subject,
+      message: validatedData.message,
+      ip_address: ip,
+      user_agent: request.headers.get("user-agent") || "unknown",
+    })
+
+    if (error) {
+      throw new Error(`Failed to save contact message: ${error.message}`)
+    }
+
+    logger.info(
+      "Contact form submitted successfully",
+      {
+        email: validatedData.email,
+        subject: validatedData.subject,
+      },
+      undefined,
+      requestId,
+    )
 
     return NextResponse.json({
       success: true,
       message: "Your message has been sent successfully! We'll get back to you soon.",
     })
   } catch (error) {
-    console.error("Contact form submission error:", error)
-    return NextResponse.json(
-      { success: false, message: "An error occurred while sending your message. Please try again." },
-      { status: 500 },
+    logger.error(
+      "Contact form submission failed",
+      {
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      undefined,
+      requestId,
     )
+
+    const { message, statusCode } = handleError(error)
+    return NextResponse.json({ success: false, message }, { status: statusCode })
   }
 }

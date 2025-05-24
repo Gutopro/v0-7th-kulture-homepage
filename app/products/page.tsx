@@ -2,6 +2,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
 import { getProducts, initializeDatabase } from "@/lib/db"
+import { DbInitInstructions } from "@/components/db-init-instructions"
 
 // Sample data for fallback
 const sampleProducts = [
@@ -20,7 +21,12 @@ const sampleProducts = [
 
 export default async function ProductsPage() {
   // Initialize the database tables if they don't exist
-  await initializeDatabase()
+  const initResult = await initializeDatabase()
+
+  // If database initialization failed, show instructions
+  if (!initResult.success) {
+    return <DbInitInstructions />
+  }
 
   // Try to fetch products from the database, fallback to sample data if empty or error
   let products

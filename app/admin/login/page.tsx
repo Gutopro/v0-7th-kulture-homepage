@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -22,30 +21,33 @@ export default function AdminLoginPage() {
     setIsLoading(true)
 
     try {
-      // For now, just simulate a successful login
-      // In production, you would validate credentials against your API
-      setTimeout(() => {
-        if (username === "admin" && password === "admin123") {
-          toast({
-            title: "Login successful",
-            description: "Welcome to the admin dashboard",
-          })
-          router.push("/admin")
-        } else {
-          toast({
-            title: "Login failed",
-            description: "Invalid username or password",
-            variant: "destructive",
-          })
-        }
-        setIsLoading(false)
-      }, 1000)
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      if (username === "admin" && password === "admin123") {
+        // Set authentication state
+        localStorage.setItem("adminLoggedIn", "true")
+
+        toast({
+          title: "Login successful",
+          description: "Welcome to the admin dashboard",
+        })
+
+        router.push("/admin")
+      } else {
+        toast({
+          title: "Login failed",
+          description: "Invalid username or password",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       toast({
         title: "Login error",
         description: "An error occurred during login. Please try again.",
         variant: "destructive",
       })
+    } finally {
       setIsLoading(false)
     }
   }
