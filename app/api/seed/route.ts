@@ -4,11 +4,11 @@ import { initializeDatabase } from "@/lib/db"
 
 export async function GET() {
   try {
-    // First check if database is accessible
+    // First initialize the database tables
     const initResult = await initializeDatabase()
     if (!initResult.success) {
       return NextResponse.json(
-        { success: false, message: "Database not accessible", error: String(initResult.error) },
+        { success: false, message: "Failed to initialize database", error: String(initResult.error) },
         { status: 500 },
       )
     }

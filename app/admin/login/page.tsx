@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -21,23 +22,27 @@ export default function AdminLoginPage() {
     setIsLoading(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      })
 
-      if (username === "admin" && password === "admin123") {
-        // Set authentication state
-        localStorage.setItem("adminLoggedIn", "true")
+      const data = await response.json()
 
+      if (data.success) {
         toast({
           title: "Login successful",
           description: "Welcome to the admin dashboard",
         })
-
         router.push("/admin")
+        router.refresh()
       } else {
         toast({
           title: "Login failed",
-          description: "Invalid username or password",
+          description: data.message || "Invalid username or password",
           variant: "destructive",
         })
       }

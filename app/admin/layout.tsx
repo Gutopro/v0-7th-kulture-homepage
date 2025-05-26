@@ -1,60 +1,30 @@
-"use client"
+import type { ReactNode } from "react"
+import { AdminSidebar } from "@/components/admin/sidebar"
+import { getCurrentAdmin } from "@/lib/auth"
+import { redirect } from "next/navigation"
 
-import type React from "react"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Sidebar } from "@/components/admin/sidebar"
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const admin = getCurrentAdmin()
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
-  const router = useRouter()
-
-  useEffect(() => {
-    // Check authentication on client side
-    const checkAuth = () => {
-      try {
-        const adminSession = document.cookie.split("; ").find((row) => row.startsWith("admin_session="))
-
-        if (!adminSession) {
-          router.push("/admin/login")
-          return
-        }
-
-        setIsAuthenticated(true)
-      } catch (error) {
-        console.error("Auth check failed:", error)
-        router.push("/admin/login")
-      }
-    }
-
-    checkAuth()
-  }, [router])
-
-  // Show loading while checking authentication
-  if (isAuthenticated === null) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Checking authentication...</p>
-        </div>
-      </div>
-    )
+  // If not logged in and not on login page, redirect to login
+  if (!admin && !children.props.childProp.segment.includes("login")) {
+    redirect("/admin/login")
   }
 
-  // If not authenticated, don't render anything (redirect is happening)
-  if (!isAuthenticated) {
-    return null
+  // If on login page and already logged in, redirect to admin dashboard
+  if (admin && children.props.childProp.segment.includes("login")) {
+    redirect("/admin")
+  }
+
+  // If on login page, don't show the sidebar
+  if (children.props.childProp.segment.includes("login")) {
+    return children
   }
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <Sidebar />
-      <main className="flex-1 p-6 md:p-8">{children}</main>
+    <div className="flex min-h-screen">
+      <AdminSidebar />
+      <div className="flex-1 overflow-auto">{children}</div>
     </div>
   )
 }
